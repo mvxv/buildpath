@@ -5,11 +5,16 @@
   "description": "Pick a portfolio project, follow a roadmap, track your progress.",
   "scripts": {
     "install:all": "npm --prefix server install && npm --prefix client install && npm --prefix seed install",
+    "migrate": "node db/migrate.js",
     "dev:server": "npm --prefix server run dev",
     "dev:client": "npm --prefix client run dev",
     "build": "npm --prefix client run build",
     "seed": "node seed/seed.js",
     "seed:reset": "node seed/seed.js --reset",
     "test": "npm --prefix server test"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "pg": "^8.12.0"
   }
 }
