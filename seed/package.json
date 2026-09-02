@@ -1,0 +1,14 @@
+{
+  "name": "buildpath-seed",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Seeds the BuildPath project library.",
+  "scripts": {
+    "seed": "node seed.js",
+    "seed:reset": "node seed.js --reset"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "pg": "^8.12.0"
+  }
+}
