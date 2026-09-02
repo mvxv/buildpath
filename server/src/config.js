@@ -6,8 +6,7 @@ function required(name) {
   const value = process.env[name];
   if (!value) {
     throw new Error(
-      `Missing required environment variable ${name}. ` +
-        'Copy server/.env.example to server/.env and fill in the values from your Supabase project.'
+      `Missing required environment variable ${name}. See server/.env.example.`
     );
   }
   return value;

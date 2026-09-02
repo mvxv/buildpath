@@ -12,8 +12,8 @@ export const isSupabaseConfigured = Boolean(url && anonKey);
 
 if (!isSupabaseConfigured) {
   console.warn(
-    'Supabase is not configured. Copy client/.env.example to client/.env and set ' +
-      'VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable accounts and progress tracking.'
+    'Supabase is not configured: accounts and progress tracking are disabled. ' +
+      'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY. See client/.env.example.'
   );
 }
 

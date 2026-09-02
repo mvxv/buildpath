@@ -6,9 +6,9 @@
 -- New shape:       user_projects.user_id -> auth.users(id)     (the ids Supabase Auth
 --                  actually issues), with extra profile fields moved to `profiles`.
 --
--- Run db/001_init.sql FIRST (it creates `profiles`), then this file.
--- Every step is guarded, so this is a no-op on a database that is already migrated
--- or was created fresh from 001_init.sql.
+-- Depends on `profiles` existing, so it runs after 001_init.sql. `npm run migrate`
+-- applies both in order. Every step is guarded, so this is a no-op on a database
+-- that is already migrated or was created fresh.
 
 BEGIN;
 

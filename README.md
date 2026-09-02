@@ -1,116 +1,46 @@
 # BuildPath
 
-A web platform that helps students pick a portfolio project worth building, gives
-them a structured roadmap, and tracks their progress through it.
+Most students learning to code get stuck in the same place: they know they need a
+portfolio project, they just have no idea which one. So they pick something too
+ambitious, stall three days in, and end up with another abandoned repo.
 
-- **Curated project library** — 14 projects with descriptions, difficulty, time
-  estimates, tech stacks, prerequisites, ordered roadmap steps, and vetted resources.
-- **Matching quiz** — five questions (experience, career goal, time available,
-  interests, familiar tech) scored against the whole library, returning ranked
-  matches with the reason each one scored well.
-- **Progress tracking** — save a project, work through its roadmap as a checklist,
-  watch the progress bar move.
-- **Deployment guidance** — a static page covering the path from localhost to a
-  live link, and the mistakes that usually cost an afternoon.
+BuildPath fixes the picking part, then makes sure the project actually gets
+finished.
 
-## Stack
+- **A curated library.** 15 projects, each with a real time estimate, prerequisites,
+  an ordered roadmap, and links worth reading.
+- **A matching quiz.** Five questions — experience, career goal, time available,
+  interests, familiar tech — scored against the whole library. You get a ranked
+  shortlist and, for each one, the reason it scored well.
+- **Progress tracking.** Save a project and its roadmap becomes a checklist. Tick
+  steps off and the path fills in behind you.
+- **A deployment guide**, because a project that only runs on your laptop is hard
+  to show anyone.
 
-| Layer    | Choice                              |
-| -------- | ----------------------------------- |
-| Frontend | React (Vite) + Tailwind CSS v4      |
-| Testing  | node:test + PGlite (no credentials needed) |
-| Backend  | Node.js + Express                   |
-| Database | PostgreSQL on Supabase              |
-| Auth     | Supabase Auth                       |
-| Hosting  | Vercel (client) + Render or Railway (server) |
+## Built with
 
-## Layout
+React (Vite) and Tailwind on the front, Express and PostgreSQL behind it, with
+Supabase handling auth and hosting the database.
 
-```
-buildpath/
-├── db/                   SQL you run against Supabase
-│   ├── 001_init.sql          baseline schema (idempotent)
-│   └── 002_auth_migration.sql moves user_projects onto auth.users
-├── server/               Express API
-│   ├── test/                 test suite — runs against in-process Postgres
-│   └── src/
-│       ├── index.js          app, CORS, error handling
-│       ├── config.js         env loading and validation
-│       ├── db/index.js       pg pool
-│       ├── supabaseClient.js service-role client (token verification only)
-│       ├── middleware/auth.js requireAuth + lazy profile creation
-│       ├── lib/quiz.js       matching quiz scoring
-│       └── routes/           projects, quiz, profile, user-projects, user-progress
-├── seed/                 project catalog and seeding script
-│   ├── projects.js           the 14 curated projects
-│   └── seed.js               inserts them (idempotent)
-└── client/               React frontend
-    └── src/
-        ├── pages/            Home, Library, ProjectDetail, Quiz, MyProjects,
-        │                     SavedProject, Deploy, Login, Signup, NotFound
-        ├── components/       Layout, ProjectCard, AuthForm, ProtectedRoute, ui
-        ├── context/          AuthContext (Supabase session)
-        └── lib/              supabase client, API wrapper
-```
+## Running it
 
-## Running it locally
-
-### 1. Install
+You'll need Node 20+ and a Supabase project.
 
 ```bash
 npm run install:all
 ```
 
-### 2. Configure the server
-
-Copy `server/.env.example` to `server/.env` and fill in the values from your
-Supabase project (Project Settings → Database for the connection string, Project
-Settings → API for the keys):
-
-```
-DATABASE_URL=postgresql://postgres:PASSWORD@db.YOUR_PROJECT.supabase.co:5432/postgres
-PORT=5000
-SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...
-CORS_ORIGINS=http://localhost:5173
-```
-
-URL-encode any special characters in the database password.
-
-### 3. Configure the client
-
-Copy `client/.env.example` to `client/.env`:
-
-```
-VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-VITE_SUPABASE_ANON_KEY=...
-VITE_API_URL=http://localhost:5000
-```
-
-The anon key is designed to be public and is safe in the browser bundle. The
-service role key never belongs here.
-
-### 4. Set up the database
-
-In the Supabase SQL editor, run in order:
-
-1. `db/001_init.sql` — creates every table, index, and row-level-security policy.
-2. `db/002_auth_migration.sql` — only needed if your database still has the older
-   standalone `users` table. It is a no-op on a fresh database.
-
-Both files are safe to re-run.
-
-### 5. Seed the library
+Copy `server/.env.example` → `server/.env` and `client/.env.example` →
+`client/.env`, then fill in your Supabase values. Use the **session pooler**
+connection string, not the direct one — direct connections are IPv6-only on most
+Supabase regions.
 
 ```bash
-npm run seed
+npm run migrate   # create the schema
+npm run seed      # load the 15 projects
 ```
 
-It reads `DATABASE_URL` from `server/.env` and skips projects already present.
-Use `npm run seed:reset` to wipe the library and reinsert.
-
-### 6. Start both halves
+Then start both halves in separate terminals:
 
 ```bash
 npm run dev:server
@@ -120,147 +50,66 @@ npm run dev:server
 npm run dev:client
 ```
 
-The API listens on `http://localhost:5000` and the app on
-`http://localhost:5173`.
+The app runs at `localhost:5173`, the API at `localhost:5000`.
 
-## API
-
-Public:
-
-| Method | Path                 | Purpose                                        |
-| ------ | -------------------- | ---------------------------------------------- |
-| GET    | `/health`            | Liveness check                                 |
-| GET    | `/health/db`         | Confirms the database connection               |
-| GET    | `/api/projects`      | List projects; filters `category`, `difficulty`, `career_goal`, `q` |
-| GET    | `/api/projects/meta` | Filter options and the tech-stack vocabulary   |
-| GET    | `/api/projects/:id`  | One project with roadmap steps and resources   |
-| GET    | `/api/quiz/options`  | The quiz questions and their options           |
-| POST   | `/api/quiz/match`    | Score answers against the library, ranked      |
-
-Authenticated (send `Authorization: Bearer <supabase access token>`):
-
-| Method | Path                     | Purpose                                   |
-| ------ | ------------------------ | ----------------------------------------- |
-| GET    | `/api/profile`           | The signed-in user's profile              |
-| PUT    | `/api/profile`           | Update experience level and career goal   |
-| GET    | `/api/user-projects`     | Saved projects with progress totals; `?project_id=` narrows to one |
-| POST   | `/api/user-projects`     | Save a project                            |
-| GET    | `/api/user-projects/:id` | One saved project, its roadmap, and which steps are done |
-| DELETE | `/api/user-projects/:id` | Remove a saved project                    |
-| POST   | `/api/user-progress`     | Mark a roadmap step complete or incomplete |
-
-## The interface
-
-The visual system is built around one idea, because the product is: **a path you
-walk to the end**.
-
-- **The spine.** Roadmap steps hang off a vertical line. On a saved project the
-  nodes and the connector between them light up as steps are completed, so
-  progress is something you can see at a glance rather than a number you read.
-  It is the same shape in the wordmark, in the hero preview, and in the empty
-  state.
-- **Acid green means done.** The accent is used only for completion, the active
-  route, and the primary action, so it never reads as decoration.
-- **Three typefaces with three jobs.** Space Grotesk for headings, Inter for
-  reading, JetBrains Mono for anything the machine knows — hours, counts,
-  difficulty, step numbers. The mono metadata is what makes it read as a tool
-  rather than a brochure.
-- **Segments, not a bar.** Progress is one segment per step. At five steps a
-  percentage bar barely moves; discrete segments make each tick feel earned.
-- **Dark by design.** Students screenshot portfolio projects. A near-black canvas
-  with a faint dot grid photographs better than another white SaaS template.
-
-## Testing
+## Tests
 
 ```bash
 npm test
 ```
 
-61 tests covering every route, the quiz scoring rules, ownership isolation,
-cascade deletes, and CORS. They run the real Express app against
-[PGlite](https://pglite.dev) — Postgres compiled to WebAssembly — with the
-database pool and Supabase token verification swapped out. **No credentials, no
-network, and no Supabase project required**, so they work on a fresh clone and in
-CI.
+69 tests covering every route, the quiz scoring rules, ownership isolation, and
+the token cache. They run the real Express app against
+[PGlite](https://pglite.dev), Postgres compiled to WebAssembly, with only the
+database pool and Supabase token check swapped out — so they need no credentials,
+no network, and no Supabase project. A fresh clone can run them immediately.
 
-`db/001_init.sql` and `seed/projects.js` are the real ones, so a schema or seed
-change that breaks an assumption fails the suite.
+The schema and seed data they load are the real files, so a change that breaks an
+assumption fails the suite rather than surfacing in production.
 
-### Applying migrations
+## A few decisions worth explaining
 
-```bash
-npm run migrate
+**Identity lives in `auth.users`.** An earlier version of the schema had its own
+`users` table that nothing ever wrote to, so every save failed a foreign key
+check. `user_projects` now references `auth.users` directly, and the extra profile
+fields live in a `profiles` table keyed one-to-one against it.
+
+**Token verification is cached for 60 seconds.** Checking a Supabase token is a
+network round trip — about 186ms from this region, more than every database query
+on the request put together. What's cached is the in-flight promise rather than
+the result, so the handful of calls a page fires on load collapse into a single
+verification instead of racing to make their own. The cost is that a revoked
+session stays usable for up to a minute, comfortably inside the token's own
+lifetime.
+
+**The quiz weights answers, it doesn't filter on them.** Most people skip at least
+one question, and filtering would quietly throw away good matches. Everything
+scores instead: difficulty against experience, `est_hours` against the stated time
+budget on a tolerance band, tech overlap against what you already know. Nothing is
+excluded outright, it just ranks lower.
+
+**Career goals are tagged, not derived.** There's no clean mapping from category to
+career goal — a web app is frontend practice for one person and backend practice
+for another — so each project carries its own list of goals it serves.
+
+**Ownership is checked in the query, not around it.** Every authenticated route
+filters on the user's id, and progress writes confirm in a single query that the
+saved project belongs to the caller *and* that the step belongs to that project.
+Row-level security is enabled as a second layer for anything reaching the database
+another way.
+
+## Layout
+
+```
+db/       schema and the migration runner
+server/   Express API, plus the test suite
+seed/     the project catalogue and its loader
+client/   React frontend
 ```
 
-Runs every file in `db/` in order against `DATABASE_URL` and prints what changed.
-Each file is idempotent, so this is also the way to bring an existing database up
-to date. Add `--dry` to see what would run without touching anything.
+## Adding projects
 
-## Design decisions
-
-**Auth identity.** `user_projects.user_id` references `auth.users(id)` directly.
-There is no standalone application `users` table — extra profile fields live in
-`profiles`, keyed one-to-one on `auth.users(id)`. Profile rows are created lazily
-by `requireAuth` on a user's first authenticated request, so no trigger on
-Supabase's `auth` schema is needed. `db/002_auth_migration.sql` performs this
-change on a database created from the original schema.
-
-**Quiz scoring lives on the server.** `server/src/lib/quiz.js` scores difficulty
-against experience, career goal against a project's `career_goals` tags, category
-against stated interests, tech-stack overlap against familiar tools, and
-`est_hours` against the stated time budget using a tolerance band rather than an
-exact match. Keeping it server-side means the rules stay in one place as the
-library grows and the browser never downloads every project just to rank them.
-
-**`career_goals` on the project.** The original schema had no way to connect a
-project to a career goal. Tagging each project with an array of goals beats
-deriving one from `category`, since a single category serves several goals.
-
-**CORS is configuration, not a deploy-day fix.** Allowed origins come from
-`CORS_ORIGINS`, with the Vite dev server always permitted. An unlisted origin
-simply receives no `Access-Control-Allow-Origin` header rather than an error, so
-stray traffic does not turn into 500s in the logs.
-
-**Auth stays off the hot path.** Verifying a Supabase token is a network round
-trip — measured at ~186ms from this region, more than every database query on the
-request combined. Verified tokens are cached for 60 seconds, and it is the
-in-flight promise that is cached rather than the result, so the several calls a
-page fires on load collapse into one verification instead of racing to make their
-own. A revoked session stays usable for up to a minute, which is well inside the
-token's own lifetime.
-
-Profile rows are created by the two `/api/profile` routes rather than by the auth
-middleware. Saving a project keys off `auth.users`, so it never needed a profile
-row, and creating one on every authenticated request meant a write on requests
-that had no use for it.
-
-**Ownership is enforced per query.** Every authenticated route filters on
-`req.user.id`, and progress writes verify in a single query that the saved project
-belongs to the caller *and* that the step belongs to that project. RLS policies
-are also enabled as a second layer for anything talking to PostgREST directly.
-
-## Growing the library
-
-Adding projects is content work, not code. Append entries to
-`seed/projects.js` — each needs a title, description, difficulty, `est_hours`,
-`category` (`web-app`, `productivity`, `data-viz`, `dev-tools`), `tech_stack`,
-`career_goals` (`frontend`, `backend`, `fullstack`, `data`, `devops`),
-prerequisites, roadmap steps, and resources — then run `npm run seed`. Existing
-titles are skipped, so only the new ones are inserted.
-
-## Deploying
-
-The app's own `/deploy` page covers this in detail. In short:
-
-**Backend (Render or Railway):** root directory `server`, build `npm install`,
-start `npm start`. Set `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
-and `CORS_ORIGINS` (your deployed frontend origin, no trailing slash). The app
-already listens on `process.env.PORT`.
-
-**Frontend (Vercel):** root directory `client`, build `npm run build`, output
-`dist`. Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_API_URL`
-pointing at the deployed API. Redeploy after changing any variable — Vite inlines
-them at build time.
-
-**Supabase:** add the deployed frontend URL to the auth redirect allow-list and
-set it as the site URL, or confirmation emails will point at localhost.
+Adding to the library is content work, not code. Append an entry to
+`seed/projects.js` — title, description, difficulty, hours, category, stack,
+career goals, prerequisites, five roadmap steps, a couple of resources — and run
+`npm run seed`. Titles already present are skipped, so only the new ones land.

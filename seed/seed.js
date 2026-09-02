@@ -23,7 +23,7 @@ const RESET = process.argv.includes('--reset');
 
 if (!process.env.DATABASE_URL) {
   console.error(
-    'DATABASE_URL is not set. Copy server/.env.example to server/.env and fill it in first.'
+    'DATABASE_URL is not set. Fill in server/.env before seeding.'
   );
   process.exit(1);
 }
@@ -100,7 +100,7 @@ async function seed() {
     await client.query('ROLLBACK');
     console.error('\nSeed failed and was rolled back:', err.message);
     if (/column .*career_goals.* does not exist/i.test(err.message)) {
-      console.error('Run db/001_init.sql against your database first - it adds the career_goals column.');
+      console.error('The schema is out of date. Run `npm run migrate` first.');
     }
     process.exitCode = 1;
   } finally {
