@@ -1,0 +1,58 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start BuildPath",
+      "dependsOn": ["API", "Web"],
+      "dependsOrder": "parallel",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "API",
+      "type": "shell",
+      "command": "npm run dev:server",
+      "isBackground": true,
+      "presentation": {
+        "group": "buildpath",
+        "panel": "dedicated",
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Web",
+      "type": "shell",
+      "command": "npm run dev:client",
+      "isBackground": true,
+      "presentation": {
+        "group": "buildpath",
+        "panel": "dedicated",
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run tests",
+      "type": "shell",
+      "command": "npm test",
+      "group": { "kind": "test", "isDefault": true },
+      "presentation": { "panel": "dedicated", "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Seed the library",
+      "type": "shell",
+      "command": "npm run seed",
+      "presentation": { "panel": "dedicated", "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Apply migrations",
+      "type": "shell",
+      "command": "npm run migrate",
+      "presentation": { "panel": "dedicated", "reveal": "always" },
+      "problemMatcher": []
+    }
+  ]
+}
