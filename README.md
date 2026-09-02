@@ -12,7 +12,7 @@ to a user account, and a deployment guidance page.
 ## Repository Structure
 
 ```
-Bulidpath/
+Buildpath/
 ├── client/          React frontend (Vite)
 ├── server/          Express REST API and test suite
 ├── db/              SQL schema, migration, and migration runner
