@@ -143,7 +143,7 @@ Authenticated (send `Authorization: Bearer <supabase access token>`):
 | ------ | ------------------------ | ----------------------------------------- |
 | GET    | `/api/profile`           | The signed-in user's profile              |
 | PUT    | `/api/profile`           | Update experience level and career goal   |
-| GET    | `/api/user-projects`     | Saved projects with progress totals       |
+| GET    | `/api/user-projects`     | Saved projects with progress totals; `?project_id=` narrows to one |
 | POST   | `/api/user-projects`     | Save a project                            |
 | GET    | `/api/user-projects/:id` | One saved project, its roadmap, and which steps are done |
 | DELETE | `/api/user-projects/:id` | Remove a saved project                    |
@@ -186,6 +186,16 @@ CI.
 `db/001_init.sql` and `seed/projects.js` are the real ones, so a schema or seed
 change that breaks an assumption fails the suite.
 
+### Applying migrations
+
+```bash
+npm run migrate
+```
+
+Runs every file in `db/` in order against `DATABASE_URL` and prints what changed.
+Each file is idempotent, so this is also the way to bring an existing database up
+to date. Add `--dry` to see what would run without touching anything.
+
 ## Design decisions
 
 **Auth identity.** `user_projects.user_id` references `auth.users(id)` directly.
@@ -210,6 +220,19 @@ deriving one from `category`, since a single category serves several goals.
 `CORS_ORIGINS`, with the Vite dev server always permitted. An unlisted origin
 simply receives no `Access-Control-Allow-Origin` header rather than an error, so
 stray traffic does not turn into 500s in the logs.
+
+**Auth stays off the hot path.** Verifying a Supabase token is a network round
+trip — measured at ~186ms from this region, more than every database query on the
+request combined. Verified tokens are cached for 60 seconds, and it is the
+in-flight promise that is cached rather than the result, so the several calls a
+page fires on load collapse into one verification instead of racing to make their
+own. A revoked session stays usable for up to a minute, which is well inside the
+token's own lifetime.
+
+Profile rows are created by the two `/api/profile` routes rather than by the auth
+middleware. Saving a project keys off `auth.users`, so it never needed a profile
+row, and creating one on every authenticated request meant a write on requests
+that had no use for it.
 
 **Ownership is enforced per query.** Every authenticated route filters on
 `req.user.id`, and progress writes verify in a single query that the saved project

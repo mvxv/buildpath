@@ -48,8 +48,28 @@ async function request(path, { method = 'GET', body, auth = false } = {}) {
   return payload;
 }
 
+/**
+ * Filter options and quiz choices change only when the library is reseeded, but
+ * three separate pages need them. Holding the in-flight promise means a session
+ * fetches each once, and pages that mount together share one request rather than
+ * racing to make their own.
+ */
+const memo = new Map();
+const once = (key, load) => {
+  if (!memo.has(key)) {
+    memo.set(
+      key,
+      load().catch((err) => {
+        memo.delete(key); // A failure must not be cached, or retrying is pointless.
+        throw err;
+      })
+    );
+  }
+  return memo.get(key);
+};
+
 export const api = {
-  getMeta: () => request('/api/projects/meta'),
+  getMeta: () => once('meta', () => request('/api/projects/meta')),
 
   getProjects: (filters = {}) => {
     const params = new URLSearchParams(
@@ -61,13 +81,19 @@ export const api = {
 
   getProject: (id) => request(`/api/projects/${id}`),
 
-  getQuizOptions: () => request('/api/quiz/options'),
+  getQuizOptions: () => once('quiz-options', () => request('/api/quiz/options')),
   matchProjects: (answers) => request('/api/quiz/match', { method: 'POST', body: answers }),
 
   getProfile: () => request('/api/profile', { auth: true }),
   updateProfile: (body) => request('/api/profile', { method: 'PUT', body, auth: true }),
 
   getSavedProjects: () => request('/api/user-projects', { auth: true }),
+
+  /** Whether this project is already saved, without pulling the whole list. */
+  getSavedProjectFor: async (projectId) => {
+    const rows = await request(`/api/user-projects?project_id=${projectId}`, { auth: true });
+    return rows[0] || null;
+  },
   getSavedProject: (id) => request(`/api/user-projects/${id}`, { auth: true }),
   saveProject: (projectId) =>
     request('/api/user-projects', { method: 'POST', body: { project_id: projectId }, auth: true }),

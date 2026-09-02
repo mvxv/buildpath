@@ -7,10 +7,20 @@ const router = express.Router();
 
 router.use(requireAuth);
 
-/** Saved projects with enough progress detail to render the "My Projects" cards. */
+/**
+ * Saved projects with enough progress detail to render the "My Projects" cards.
+ *
+ * `?project_id=` narrows to one project, which is how a project page asks
+ * "has this been saved already?" without pulling down the user's whole list.
+ */
 router.get(
   '/',
   asyncRoute(async (req, res) => {
+    const { project_id: projectId } = req.query;
+    if (projectId && !isUuid(projectId)) {
+      return res.status(400).json({ error: 'project_id must be a valid project uuid' });
+    }
+
     const { rows } = await db.query(
       `SELECT up.id,
               up.created_at,
@@ -27,11 +37,12 @@ router.get(
          FROM user_projects up
          JOIN projects p ON p.id = up.project_id
         WHERE up.user_id = $1
+          AND ($2::uuid IS NULL OR up.project_id = $2::uuid)
         ORDER BY up.created_at DESC`,
-      [req.user.id]
+      [req.user.id, projectId || null]
     );
 
-    res.json(
+    return res.json(
       rows.map((row) => ({
         ...row,
         total_steps: Number(row.total_steps),

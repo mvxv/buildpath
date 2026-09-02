@@ -5,7 +5,7 @@
 -- the standalone `users` table), run db/002_auth_migration.sql AFTER this file to
 -- move `user_projects` over to auth.users.
 --
--- Auth decision (see handoff section 8.1): Path A.
+-- Identity model:
 --   * There is no standalone application `users` table.
 --   * `user_projects.user_id` references auth.users(id) directly.
 --   * Extra profile fields live in `profiles`, keyed 1:1 on auth.users(id).
@@ -25,9 +25,10 @@ CREATE TABLE IF NOT EXISTS projects (
   est_hours     INT,
   category      VARCHAR(50),
   tech_stack    JSONB,
-  -- Added for quiz scoring (handoff section 8.3): array of career-goal tags,
-  -- e.g. ["frontend","fullstack"]. Kept on the project rather than derived from
-  -- `category` so a project can serve more than one goal.
+  -- Career-goal tags the quiz scores against, e.g. ["frontend","fullstack"].
+  -- Kept on the project rather than derived from `category`, because one category
+  -- serves several goals: a web app is frontend practice for one student and
+  -- backend practice for another.
   career_goals  JSONB DEFAULT '[]'::jsonb,
   prerequisites TEXT,
   created_at    TIMESTAMPTZ DEFAULT now()

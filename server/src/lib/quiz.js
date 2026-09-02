@@ -1,19 +1,16 @@
 /**
- * Matching quiz scoring (handoff section 8.3).
+ * Scoring for the matching quiz.
  *
- * The schema has no career_goal column on projects and only `est_hours` for time,
- * so two mappings are defined here:
+ * Answers are weighted, not filtered: a project is never excluded outright, it
+ * just ranks lower. That matters because most students skip at least one
+ * question, and a filter would quietly throw away good matches.
  *
- *   career goal — projects carry a `career_goals` JSONB array of tags, added in
- *                 db/001_init.sql and populated by the seed script. Tagging the
- *                 project directly beats deriving it from `category`, because one
- *                 category serves several goals (a "web-app" is frontend practice
- *                 for one student and backend practice for another).
+ * Two of the five answers have no column to compare against directly:
  *
- *   time        — `est_hours` is scored against the student's budget with a
- *                 tolerance band rather than an exact match: comfortably inside the
- *                 budget scores best, moderately over still scores, far over is
- *                 penalised but not excluded.
+ *   career goal — matched against the project's `career_goals` tags
+ *   time        — matched against `est_hours` on a tolerance band, so a project
+ *                 slightly over budget still places, and one far over is
+ *                 penalised rather than dropped
  */
 
 const EXPERIENCE_LEVELS = ['beginner', 'intermediate', 'advanced'];

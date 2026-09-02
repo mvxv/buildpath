@@ -12,7 +12,9 @@ const userProgressRouter = require('./routes/userProgress');
 
 const app = express();
 
-// CORS is configured here rather than at deploy time (handoff section 8.2).
+// Nothing here benefits from advertising the framework and version.
+app.disable('x-powered-by');
+
 // Requests without an Origin header (curl, health checks, server-to-server) pass
 // through; browser origins must be listed in CORS_ORIGINS.
 //
@@ -29,7 +31,9 @@ app.use(
   })
 );
 
-app.use(express.json());
+// Every request body this API accepts is a handful of ids and short strings, so
+// the default 100kb ceiling is already generous.
+app.use(express.json({ limit: '100kb' }));
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', uptime: process.uptime() });
@@ -55,11 +59,15 @@ app.use((req, res) => {
   res.status(404).json({ error: `No route for ${req.method} ${req.path}` });
 });
 
-// eslint-disable-next-line no-unused-vars -- Express identifies error handlers by arity.
-app.use((err, req, res, next) => {
+// Four parameters, including the unused `next`: that arity is how Express tells
+// an error handler apart from ordinary middleware.
+app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
   console.error(`${req.method} ${req.path} failed:`, err);
+
   const status = err.status || 500;
   res.status(status).json({
+    // Internal failures leak stack details and query text, so in production the
+    // client gets a flat message and the specifics stay in the server log.
     error: config.isProduction && status === 500 ? 'Internal server error' : err.message,
   });
 });

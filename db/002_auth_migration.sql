@@ -1,7 +1,5 @@
 -- BuildPath — migrate from the original schema to the auth.users-backed one.
 --
--- Resolves the open question in handoff section 4 / 8.1.
---
 -- Original shape:  user_projects.user_id -> public.users(id)   (a standalone table
 --                  with its own gen_random_uuid() default, never populated on signup,
 --                  so no authenticated request could ever satisfy the foreign key).

@@ -32,15 +32,22 @@ export default function ProjectDetail() {
   useEffect(() => {
     if (!user) {
       setSavedId(null);
-      return;
+      return undefined;
     }
+
+    let cancelled = false;
     api
-      .getSavedProjects()
+      .getSavedProjectFor(id)
       .then((saved) => {
-        const match = saved.find((entry) => entry.project_id === id);
-        setSavedId(match ? match.id : null);
+        if (!cancelled) setSavedId(saved?.id ?? null);
       })
-      .catch(() => setSavedId(null));
+      .catch(() => {
+        if (!cancelled) setSavedId(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [user, id]);
 
   const handleSave = async () => {

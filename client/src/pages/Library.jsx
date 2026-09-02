@@ -5,6 +5,7 @@ import ProjectCard from '../components/ProjectCard.jsx';
 import { EmptyState, ErrorState, Loading } from '../components/States.jsx';
 import { categoryLabel } from '../components/ui.jsx';
 import { api } from '../lib/api';
+import { useDebounced } from '../lib/useDebounced';
 
 const FILTER_KEYS = ['q', 'category', 'difficulty', 'career_goal'];
 
@@ -18,6 +19,10 @@ export default function Library() {
   const filters = Object.fromEntries(FILTER_KEYS.map((key) => [key, searchParams.get(key) || '']));
   const hasFilters = FILTER_KEYS.some((key) => filters[key]);
 
+  // Typing updates the URL immediately but the fetch waits for a pause, so a
+  // ten-character search costs one request instead of ten.
+  const query = useDebounced(searchParams.toString());
+
   useEffect(() => {
     api.getMeta().then(setMeta).catch(() => setMeta(null));
   }, []);
@@ -26,11 +31,11 @@ export default function Library() {
     setLoading(true);
     setError(null);
     api
-      .getProjects(Object.fromEntries(searchParams))
+      .getProjects(Object.fromEntries(new URLSearchParams(query)))
       .then(setProjects)
       .catch(setError)
       .finally(() => setLoading(false));
-  }, [searchParams]);
+  }, [query]);
 
   useEffect(load, [load]);
 

@@ -22,15 +22,25 @@ test('authentication', async (t) => {
     assert.equal((await ctx.call('/api/user-projects', { token: 'garbage' })).status, 401);
   });
 
-  await t.test('creates the profile row lazily on first authenticated request', async () => {
+  await t.test('does not touch the database just to authenticate', async () => {
     const before = await ctx.pg.query('SELECT COUNT(*)::int AS n FROM profiles');
     assert.equal(before.rows[0].n, 0);
 
     await ctx.call('/api/user-projects', { token: ctx.TOKENS.primary });
 
-    const after = await ctx.pg.query('SELECT id FROM profiles');
-    assert.equal(after.rows.length, 1);
-    assert.equal(after.rows[0].id, ctx.USERS.primary.id);
+    // Saving projects keys off auth.users, so no profile row is needed and none
+    // should be written. This is what keeps auth off the write path.
+    const after = await ctx.pg.query('SELECT COUNT(*)::int AS n FROM profiles');
+    assert.equal(after.rows[0].n, 0);
+  });
+
+  await t.test('creates the profile row on first read of it', async () => {
+    const res = await ctx.call('/api/profile', { token: ctx.TOKENS.primary });
+    assert.equal(res.body.id, ctx.USERS.primary.id);
+    assert.equal(res.body.email, ctx.USERS.primary.email);
+
+    const rows = await ctx.pg.query('SELECT id FROM profiles');
+    assert.equal(rows.rows.length, 1);
   });
 });
 
@@ -104,6 +114,26 @@ test('saving and tracking a project', async (t) => {
       body: { project_id: ctx.ABSENT_UUID },
     });
     assert.equal(res.status, 404);
+  });
+
+  await t.test('narrows the list to one project when asked', async () => {
+    const mine = await ctx.call(`/api/user-projects?project_id=${projectId}`, {
+      token: ctx.TOKENS.primary,
+    });
+    assert.equal(mine.body.length, 1);
+    assert.equal(mine.body[0].id, savedId);
+
+    const others = await ctx.call('/api/projects');
+    const unsaved = others.body.find((p) => p.id !== projectId);
+    const none = await ctx.call(`/api/user-projects?project_id=${unsaved.id}`, {
+      token: ctx.TOKENS.primary,
+    });
+    assert.deepEqual(none.body, []);
+
+    const bad = await ctx.call('/api/user-projects?project_id=nope', {
+      token: ctx.TOKENS.primary,
+    });
+    assert.equal(bad.status, 400);
   });
 
   await t.test('returns the roadmap with every step incomplete', async () => {

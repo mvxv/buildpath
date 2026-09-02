@@ -60,6 +60,10 @@ async function setup() {
   const dbPath = require.resolve(path.join(REPO_ROOT, 'server/src/db/index.js'));
   require.cache[dbPath] = { id: dbPath, filename: dbPath, loaded: true, exports: { query, pool: null } };
 
+  // Counts how often a token is actually verified against Supabase, so tests can
+  // assert the middleware's cache is doing its job.
+  const verifications = { count: 0 };
+
   const supabasePath = require.resolve(path.join(REPO_ROOT, 'server/src/supabaseClient.js'));
   require.cache[supabasePath] = {
     id: supabasePath,
@@ -69,6 +73,7 @@ async function setup() {
       supabaseAdmin: {
         auth: {
           getUser: async (token) => {
+            verifications.count += 1;
             const key = Object.keys(TOKENS).find((name) => TOKENS[name] === token);
             if (!key) return { data: null, error: { message: 'invalid token' } };
             return { data: { user: USERS[key] }, error: null };
@@ -114,7 +119,9 @@ async function setup() {
     return { status: response.status, body: payload, headers: response.headers };
   };
 
-  return { pg, server, call, USERS, TOKENS, ABSENT_UUID };
+  const { forgetToken } = require(path.join(REPO_ROOT, 'server/src/middleware/auth.js'));
+
+  return { pg, server, call, USERS, TOKENS, ABSENT_UUID, verifications, forgetToken };
 }
 
 /** Loads the real seed catalog with the same statements seed.js uses. */
