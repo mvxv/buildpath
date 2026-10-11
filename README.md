@@ -9,6 +9,32 @@ completion. It provides a curated project library, a matching quiz that ranks
 projects against a student's experience and goals, per-step progress tracking tied
 to a user account, and a deployment guidance page.
 
+## Screens
+
+**Landing page** — the roadmap preview shows the product's core idea: a path that
+fills in as steps are completed.
+
+![BuildPath landing page](docs/screenshots/home.png)
+
+**Project library** — 15 curated projects, filterable by search, category,
+difficulty and career goal. Filtering runs in SQL on the server.
+
+![Project library with filters](docs/screenshots/library.png)
+
+**Matching quiz** — five optional questions, scored against every project in the
+library. Skipped questions contribute nothing rather than filtering results out.
+
+![Matching quiz](docs/screenshots/quiz.png)
+
+**My projects** — saved projects with per-step progress.
+
+![Saved projects dashboard](docs/screenshots/my-projects.png)
+
+**Deployment guide** — static guidance covering the path from localhost to a
+deployed application, and the failure modes students hit most often.
+
+![Deployment guidance page](docs/screenshots/deploy-guide.png)
+
 ## Repository Structure
 
 ```
